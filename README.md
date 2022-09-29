@@ -1,2 +1,2 @@
 # E-Commerce App
-Tech Stack: [NodeJS, ExpressJS, esLint, sequelize]
+Tech Stack: [NodeJS, ExpressJS,sequelize]
