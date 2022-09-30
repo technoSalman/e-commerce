@@ -14,12 +14,18 @@ const saveOtp = async(userId, otp) => {
     }
 };
 
-
-const matchOtp = async(otpEntered) => {
+//take otp and id from controller as parameter and do the following:
+//1. find latest otp with that id
+//2. compare it with input otp 
+const matchOtp = async(otpEntered, getUserId) => {
     try{
-        const otpInDb = await OTP.findOne({ where: { otp: otpEntered }});
-        if(otpInDb){
-            return otpInDb;
+        const latestOtpObj = await OTP.findOne({ where: { user_id: getUserId } , order: [['createdAt', 'DESC'],]});
+        const latestOtp = latestOtpObj.otp;
+        if(latestOtp == otpEntered){
+            return true;
+        }
+        if(latestOtp != otpEntered){
+            return false;
         }
     }
     catch(error){
@@ -42,11 +48,10 @@ const getUserIdByOtp = async(otp) => {
     }
 };
 
-const deleteOtp = async(verifyOtp) => {
+const deleteOtp = async(userId) => {
     try{
-        const otp = verifyOtp.dataValues.otp;
         // eslint-disable-next-line no-unused-vars
-        const deletedOtp = OTP.destroy({where:{ otp: otp}});
+        const deletedOtp = OTP.destroy({where:{ user_id: userId}});
     }
     catch(error){
         console.log('OTP deletion failed...');  

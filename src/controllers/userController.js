@@ -22,7 +22,7 @@ const signup = async (req, res) => {
 
         const oldUser = await userServices.getUserByEmail(email, password);
         if (oldUser) {
-            return res.status(400).send({
+            return res.status(401).send({
                 status: 'FAILED',
                 message: 'User already exists, Please log in',
             });
@@ -41,7 +41,7 @@ const signup = async (req, res) => {
                 html: `<p> Please click this link to confirm your email address <br>
                 <a href="${url}">${url}</a> </p>`
             };
-            const sent = wrappedSendMail(email, token, mailOptions);
+            const sent = await wrappedSendMail(email, token, mailOptions);
             if(sent){
                 return res.status(303).send({
                     status: 'SUCCESS',
@@ -51,6 +51,7 @@ const signup = async (req, res) => {
         }       
     }
     catch (error) {
+        console.log(error);
         res.status(500).send({
             status: 'FAILED',
             error,
@@ -153,7 +154,7 @@ const forgotPassword = async (req, res) => {
                                 html: `<p> You requested for reset password. Kindly use this otp:<br>
                                 <b> ${otp}</b><br> to reset`
                             };
-                            const sent = wrappedSendMail(email, otp, mailOptions);
+                            const sent = await wrappedSendMail(email, otp, mailOptions);
                             if (sent) {
                                 return res.status(200).send({
                                     status: 'SUCCESS',
@@ -186,20 +187,23 @@ const forgotPassword = async (req, res) => {
 
 
 const resetPassword = async (req, res) => {
+
     const otp = req.body.otp;
     const newPassword = req.body.newPassword;
+    //validation missing
 
-    const verifyOtp = await otpService.matchOtp(otp);
-    if (verifyOtp) {
-        const getUserId = await otpService.getUserIdByOtp(otp);
-        if(getUserId){
-            const getUserEmail = await userServices.getUserEmail(getUserId);
-            if(getUserEmail){
-                const updatedUser = await userServices.updatePassword(getUserEmail, newPassword);
+    //use getUserId before verifyOtp get id from that and send it to verifyOtp with otp as arguments.
+    const userId = await otpService.getUserIdByOtp(otp);
+    if (userId) {
+        const verifyOtp = await otpService.matchOtp(otp, userId);
+        if(verifyOtp){
+            const userEmail = await userServices.getUserEmail(userId);
+            if(userEmail){
+                const updatedUser = await userServices.updatePassword(userEmail, newPassword);
                 
                 if (updatedUser) {
                     // eslint-disable-next-line no-unused-vars
-                    const deleteOtp = await otpService.deleteOtp(verifyOtp);
+                    const deleteOtp = await otpService.deleteOtp(userId);
                     return res.status(200).send({
                         status: 'SUCCESS',
                         message: 'Your password has been updated, Please log in',
@@ -213,14 +217,15 @@ const resetPassword = async (req, res) => {
                 }
             }
         }
+        if (!verifyOtp) {
+            return res.status(400).send({
+                status: 'FAILED',
+                message: 'Wrong OTP',
+            });
+        }
     
     }
-    if (!verifyOtp) {
-        return res.status(400).send({
-            status: 'FAILED',
-            message: 'Wrong OTP',
-        });
-    }
+   
 };
 
 
