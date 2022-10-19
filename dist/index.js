@@ -21,8 +21,11 @@ const app = (0, express_1.default)();
 const routes_1 = __importDefault(require("./routes/routes"));
 // eslint-disable-next-line no-undef
 const PORT = process.env.PORT;
+var corsOptions = {
+    origin: 'http://localhost:3000',
+};
 app.use(express_1.default.json());
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)(corsOptions));
 app.use('/api/v1', routes_1.default);
 const startServer = (PORT) => __awaiter(void 0, void 0, void 0, function* () {
     try {

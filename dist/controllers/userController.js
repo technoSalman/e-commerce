@@ -33,8 +33,10 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const jwt_decode_1 = __importDefault(require("jwt-decode"));
 const mailSender_1 = require("../utils/mailSender");
 const signup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const email = req.body.email;
-    const password = req.body.password;
+    let email = req.body.email;
+    let password = req.body.password;
+    email = email.trim();
+    password = password.trim();
     if (!(email && password)) {
         return res.status(400).send({
             status: 'FAILED',
@@ -46,7 +48,7 @@ const signup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (oldUser) {
             return res.status(401).send({
                 status: 'FAILED',
-                message: 'User already exists, Please log in',
+                message: 'User already exists, Please log in.',
             });
         }
         if (!oldUser) {
@@ -104,39 +106,41 @@ exports.confirmEmail = confirmEmail;
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const email = req.body.email;
     const password = req.body.password;
-    if (!(email && password)) {
-        res.status(400).send({
-            statcreateTransportus: 'FAILED',
-            message: 'Email and password are required',
-        });
-    }
     try {
-        const oldUser = yield (0, userServices_1.getUserByEmail)(email);
-        if (oldUser) {
-            const loginUser = yield (0, userServices_1.loginUserService)(email, password);
-            if (loginUser) {
-                const _a = loginUser.dataValues, { password } = _a, rest = __rest(_a, ["password"]);
-                // eslint-disable-next-line no-undef
-                const token = jsonwebtoken_1.default.sign({ rest }, process.env.TOKEN_KEY, {
-                    expiresIn: '3600s',
-                });
-                loginUser.token = token;
-                return res.status(200).send({
-                    message: 'User logged In',
-                    token,
-                });
-            }
-            else {
-                return res.status(403).send({
-                    message: 'User credential does not match',
-                });
-            }
-        }
-        if (!oldUser) {
-            return res.status(200).send({
-                status: 'FAILED',
-                message: 'User does not exist, Please sign up',
+        if (!(email && password)) {
+            res.status(400).send({
+                statcreateTransportus: 'FAILED',
+                message: 'Email and password are required',
             });
+        }
+        else {
+            const oldUser = yield (0, userServices_1.getUserByEmail)(email);
+            if (oldUser) {
+                const loginUser = yield (0, userServices_1.loginUserService)(email, password);
+                if (loginUser) {
+                    const _a = loginUser.dataValues, { password } = _a, rest = __rest(_a, ["password"]);
+                    // eslint-disable-next-line no-undef
+                    const token = jsonwebtoken_1.default.sign({ rest }, process.env.TOKEN_KEY, {
+                        expiresIn: '3600s',
+                    });
+                    loginUser.token = token;
+                    return res.status(200).send({
+                        message: 'User logged In',
+                        token,
+                    });
+                }
+                else {
+                    return res.status(403).send({
+                        message: 'User credential does not match',
+                    });
+                }
+            }
+            if (!oldUser) {
+                return res.status(200).send({
+                    status: 'FAILED',
+                    message: 'User does not exist, Please sign up',
+                });
+            }
         }
     }
     catch (error) {
@@ -149,7 +153,8 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.login = login;
 const forgotPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const email = req.body.email;
+    let email = req.body.email;
+    email = email.trim();
     if (!email) {
         return res.status(400).send({
             status: 'FAILED',
@@ -197,6 +202,12 @@ const forgotPassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 }
             }
         }
+        else {
+            return res.status(400).send({
+                status: 'FAILED',
+                message: 'User does not exist, Please sign up',
+            });
+        }
     }
     catch (error) {
         res.status(500).send({
@@ -209,37 +220,51 @@ exports.forgotPassword = forgotPassword;
 const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const otp = req.body.otp;
     const newPassword = req.body.newPassword;
-    //validation missing
-    //use getUserId before verifyOtp get id from that and send it to verifyOtp with otp as arguments.
-    const userId = yield (0, otpService_1.getUserIdByOtp)(otp);
-    if (userId) {
-        const verifyOtp = yield (0, otpService_1.matchOtp)(otp, userId);
-        if (verifyOtp) {
-            const userEmail = yield (0, userServices_1.getUserEmail)(userId);
-            if (userEmail) {
-                const updatedUser = yield (0, userServices_1.updatePassword)(userEmail, newPassword);
-                if (updatedUser) {
-                    // eslint-disable-next-line no-unused-vars
-                    const deleteOtp = yield (0, otpService_1.deleteOtpService)(userId);
-                    return res.status(200).send({
-                        status: 'SUCCESS',
-                        message: 'Your password has been updated, Please log in',
-                    });
+    try {
+        if (!(otp && newPassword)) {
+            return res.status(400).send({
+                status: 'FAILED',
+                message: 'Please enter OTP and new password',
+            });
+        }
+        else {
+            const userId = yield (0, otpService_1.getUserIdByOtp)(otp);
+            if (userId) {
+                const verifyOtp = yield (0, otpService_1.matchOtp)(otp, userId);
+                if (verifyOtp) {
+                    const userEmail = yield (0, userServices_1.getUserEmail)(userId);
+                    if (userEmail) {
+                        const updatedUser = yield (0, userServices_1.updatePassword)(userEmail, newPassword);
+                        if (updatedUser) {
+                            // eslint-disable-next-line no-unused-vars
+                            const deleteOtp = yield (0, otpService_1.deleteOtpService)(userId);
+                            return res.status(200).send({
+                                status: 'SUCCESS',
+                                message: 'Your password has been updated, Please log in',
+                            });
+                        }
+                        if (!updatedUser) {
+                            return res.status(500).send({
+                                status: 'SUCCESS',
+                                message: "Couldn't update password. Please try again!",
+                            });
+                        }
+                    }
                 }
-                if (!updatedUser) {
-                    return res.status(500).send({
-                        status: 'SUCCESS',
-                        message: "Couldn't update password. Please try again!",
+                if (!verifyOtp) {
+                    return res.status(400).send({
+                        status: 'FAILED',
+                        message: 'Wrong OTP',
                     });
                 }
             }
         }
-        if (!verifyOtp) {
-            return res.status(400).send({
-                status: 'FAILED',
-                message: 'Wrong OTP',
-            });
-        }
+    }
+    catch (error) {
+        res.status(500).send({
+            status: 'FAILED',
+            error,
+        });
     }
 });
 exports.resetPassword = resetPassword;

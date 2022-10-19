@@ -18,7 +18,12 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const getUserByEmail = (email) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const oldUser = yield userModel_1.User.findOne({ where: { email: email } });
-        return oldUser;
+        if (oldUser) {
+            return oldUser;
+        }
+        else {
+            return false;
+        }
     }
     catch (error) {
         console.log('Error in getUserByEmail service ', error);
@@ -34,7 +39,7 @@ const getUserEmail = (userId) => __awaiter(void 0, void 0, void 0, function* () 
             return email;
         }
         else {
-            return 0;
+            return false;
         }
     }
     catch (error) {

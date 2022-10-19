@@ -8,11 +8,15 @@ import router from './routes/routes';
 // eslint-disable-next-line no-undef
 const PORT = process.env.PORT;
 
+var corsOptions = {
+	origin: 'http://localhost:3000',
+};
+
 app.use(express.json());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use('/api/v1', router);
 
-const startServer = async (PORT: string | undefined) => {
+const startServer = async (PORT: any) => {
 	try {
 		await sequelize.authenticate();
 	} catch (error) {

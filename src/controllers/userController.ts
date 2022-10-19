@@ -20,9 +20,10 @@ import jwt_decode, { JwtPayload } from 'jwt-decode';
 import { wrappedSendMail } from '../utils/mailSender';
 
 export const signup = async (req: any, res: any) => {
-	const email = req.body.email;
-	const password = req.body.password;
-
+	let email = req.body.email;
+	let password = req.body.password;
+	email = email.trim();
+	password = password.trim();
 	if (!(email && password)) {
 		return res.status(400).send({
 			status: 'FAILED',
@@ -103,42 +104,43 @@ export const login = async (req: any, res: any) => {
 	const email = req.body.email;
 	const password = req.body.password;
 
-	if (!(email && password)) {
-		res.status(400).send({
-			statcreateTransportus: 'FAILED',
-			message: 'Email and password are required',
-		});
-	}
 	try {
-		const oldUser = await getUserByEmail(email);
-		if (oldUser) {
-			const loginUser = await loginUserService(email, password);
-			if (loginUser) {
-				const { password, ...rest } = loginUser.dataValues;
-				// eslint-disable-next-line no-undef
-				const token = jwt.sign(
-					{ rest },
-					process.env.TOKEN_KEY as jwt.Secret,
-					{
-						expiresIn: '3600s',
-					}
-				);
-				loginUser.token = token;
+		if (!(email && password)) {
+			res.status(400).send({
+				statcreateTransportus: 'FAILED',
+				message: 'Email and password are required',
+			});
+		} else {
+			const oldUser = await getUserByEmail(email);
+			if (oldUser) {
+				const loginUser = await loginUserService(email, password);
+				if (loginUser) {
+					const { password, ...rest } = loginUser.dataValues;
+					// eslint-disable-next-line no-undef
+					const token = jwt.sign(
+						{ rest },
+						process.env.TOKEN_KEY as jwt.Secret,
+						{
+							expiresIn: '3600s',
+						}
+					);
+					loginUser.token = token;
+					return res.status(200).send({
+						message: 'User logged In',
+						token,
+					});
+				} else {
+					return res.status(403).send({
+						message: 'User credential does not match',
+					});
+				}
+			}
+			if (!oldUser) {
 				return res.status(200).send({
-					message: 'User logged In',
-					token,
-				});
-			} else {
-				return res.status(403).send({
-					message: 'User credential does not match',
+					status: 'FAILED',
+					message: 'User does not exist, Please sign up',
 				});
 			}
-		}
-		if (!oldUser) {
-			return res.status(200).send({
-				status: 'FAILED',
-				message: 'User does not exist, Please sign up',
-			});
 		}
 	} catch (error) {
 		console.log(error);
@@ -150,7 +152,8 @@ export const login = async (req: any, res: any) => {
 };
 
 export const forgotPassword = async (req: any, res: any) => {
-	const email = req.body.email;
+	let email = req.body.email;
+	email = email.trim();
 	if (!email) {
 		return res.status(400).send({
 			status: 'FAILED',
@@ -202,6 +205,11 @@ export const forgotPassword = async (req: any, res: any) => {
 					}
 				}
 			}
+		} else {
+			return res.status(400).send({
+				status: 'FAILED',
+				message: 'User does not exist, Please sign up',
+			});
 		}
 	} catch (error) {
 		res.status(500).send({
@@ -214,42 +222,54 @@ export const forgotPassword = async (req: any, res: any) => {
 export const resetPassword = async (req: any, res: any) => {
 	const otp = req.body.otp;
 	const newPassword = req.body.newPassword;
-	//validation missing
+	try {
+		if (!(otp && newPassword)) {
+			return res.status(400).send({
+				status: 'FAILED',
+				message: 'Please enter OTP and new password',
+			});
+		} else {
+			const userId = await getUserIdByOtp(otp);
+			if (userId) {
+				const verifyOtp = await matchOtp(otp, userId);
+				if (verifyOtp) {
+					const userEmail = await getUserEmail(userId);
+					if (userEmail) {
+						const updatedUser = await updatePassword(
+							userEmail,
+							newPassword
+						);
 
-	//use getUserId before verifyOtp get id from that and send it to verifyOtp with otp as arguments.
-	const userId = await getUserIdByOtp(otp);
-	if (userId) {
-		const verifyOtp = await matchOtp(otp, userId);
-		if (verifyOtp) {
-			const userEmail = await getUserEmail(userId);
-			if (userEmail) {
-				const updatedUser = await updatePassword(
-					userEmail,
-					newPassword
-				);
-
-				if (updatedUser) {
-					// eslint-disable-next-line no-unused-vars
-					const deleteOtp = await deleteOtpService(userId);
-					return res.status(200).send({
-						status: 'SUCCESS',
-						message:
-							'Your password has been updated, Please log in',
-					});
+						if (updatedUser) {
+							// eslint-disable-next-line no-unused-vars
+							const deleteOtp = await deleteOtpService(userId);
+							return res.status(200).send({
+								status: 'SUCCESS',
+								message:
+									'Your password has been updated, Please log in',
+							});
+						}
+						if (!updatedUser) {
+							return res.status(500).send({
+								status: 'SUCCESS',
+								message:
+									"Couldn't update password. Please try again!",
+							});
+						}
+					}
 				}
-				if (!updatedUser) {
-					return res.status(500).send({
-						status: 'SUCCESS',
-						message: "Couldn't update password. Please try again!",
+				if (!verifyOtp) {
+					return res.status(400).send({
+						status: 'FAILED',
+						message: 'Wrong OTP',
 					});
 				}
 			}
 		}
-		if (!verifyOtp) {
-			return res.status(400).send({
-				status: 'FAILED',
-				message: 'Wrong OTP',
-			});
-		}
+	} catch (error) {
+		res.status(500).send({
+			status: 'FAILED',
+			error,
+		});
 	}
 };

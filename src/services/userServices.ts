@@ -1,24 +1,28 @@
 import { User } from '../model/userModel';
 import bcrypt from 'bcrypt';
 
-export const getUserByEmail = async (email: string | undefined) => {
+export const getUserByEmail = async (email: any) => {
 	try {
 		const oldUser = await User.findOne({ where: { email: email } });
-		return oldUser;
+		if (oldUser) {
+			return oldUser;
+		} else {
+			return false;
+		}
 	} catch (error) {
 		console.log('Error in getUserByEmail service ', error);
 		throw error;
 	}
 };
 
-export const getUserEmail = async (userId: string | undefined) => {
+export const getUserEmail = async (userId: any) => {
 	try {
 		const user = await User.findOne({ where: { id: userId } });
 		const email = user.dataValues.email;
 		if (email) {
 			return email;
 		} else {
-			return 0;
+			return false;
 		}
 	} catch (error) {
 		console.log('Error in getUserEmail service ', error);
@@ -26,7 +30,7 @@ export const getUserEmail = async (userId: string | undefined) => {
 	}
 };
 
-export const getUserId = async (email: string | undefined) => {
+export const getUserId = async (email: any) => {
 	try {
 		const user = await User.findOne({ where: { email: email } });
 		const userId = user.dataValues.id;
@@ -39,10 +43,7 @@ export const getUserId = async (email: string | undefined) => {
 	}
 };
 
-export const signupUser = async (
-	email: string | undefined,
-	password: string
-) => {
+export const signupUser = async (email: any, password: any) => {
 	try {
 		const salt = await bcrypt.genSalt();
 		const hashedPassword = await bcrypt.hash(password, salt);
@@ -57,10 +58,7 @@ export const signupUser = async (
 	}
 };
 
-export const loginUserService = async (
-	email: string | undefined,
-	password: string | Buffer
-) => {
+export const loginUserService = async (email: any, password: any | Buffer) => {
 	try {
 		const user = await User.findOne({ where: { email: email } });
 		if (user && (await bcrypt.compare(password, user.password))) {
@@ -72,10 +70,7 @@ export const loginUserService = async (
 	}
 };
 
-export const updatePassword = async (
-	email: string | undefined,
-	password: string | Buffer
-) => {
+export const updatePassword = async (email: any, password: any | Buffer) => {
 	// eslint-disable-next-line no-useless-catch
 	try {
 		const salt = await bcrypt.genSalt();
